@@ -39,20 +39,33 @@ async def handle_registration_text(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("Отлично! Выберите класс:", reply_markup=get_class_keyboard())
         return
 
-    if context.user_data.get('awaiting_class'):
+        if context.user_data.get('awaiting_class'):
         valid = ["ВАР", "МАГ", "ТАНК", "ДРУ", "ПРИСТ", "ЛУК", "СИН", "ШАМ", "СИК", "МИСТИК"]
         if text not in valid:
             await update.message.reply_text("Выберите класс из кнопок.")
             return
         nick = context.user_data.pop('temp_nick')
-        add_pending_user(user_id, nick, text)
+        user_class = text
         context.user_data.pop('awaiting_class')
+
+        if user_id in ADMIN_IDS:
+            # Администратор регистрируется сразу, без заявки
+            register_user(user_id, nick, user_class)
+            await update.message.reply_text(
+                f"✅ Регистрация завершена!\nНик: {nick}\nКласс: {user_class}",
+                reply_markup=get_main_keyboard(user_id, is_admin=True)
+            )
+            return
+
+        # Обычный пользователь — заявка на подтверждение
+        add_pending_user(user_id, nick, user_class)
         await update.message.reply_text(
-            f"✅ Заявка отправлена!\nНик: {nick}\nКласс: {text}\nОжидайте подтверждения.",
-            reply_markup=get_main_keyboard(user_id, False))
+            f"✅ Заявка отправлена!\nНик: {nick}\nКласс: {user_class}\nОжидайте подтверждения.",
+            reply_markup=get_main_keyboard(user_id, is_admin=False)
+        )
         for aid in ADMIN_IDS:
             try:
-                await context.bot.send_message(aid, f"📝 Заявка: {nick} ({text}) ID:{user_id}")
+                await context.bot.send_message(aid, f"📝 Заявка: {nick} ({user_class}) ID:{user_id}")
             except:
                 pass
         return
