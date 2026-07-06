@@ -79,6 +79,14 @@ def get_user_class(user_id):
     row = cur.fetchone()
     conn.close()
     return row[0] if row else None
+    
+def register_user(user_id, nick, user_class):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("INSERT INTO users (user_id, nick, class) VALUES (?, ?, ?)",
+                (user_id, nick, user_class))
+    conn.commit()
+    conn.close()
 
 def is_nick_taken(nick):
     conn = sqlite3.connect(DB_FILE)
