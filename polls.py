@@ -2,10 +2,10 @@ import json, logging, os
 from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
 from database import *
-from keyboards import get_poll_question_inline, get_confirm_restart_inline
+from keyboards import get_poll_question_inline, get_confirm_restart_inline, get_admin_keyboard
 
 def get_google_spreadsheet():
     creds = os.environ.get("GOOGLE_CREDS")
@@ -20,7 +20,6 @@ def get_google_spreadsheet():
 def sanitize_sheet_name(name):
     return name.replace('/', '').replace('\\', '').replace('?', '').replace('*', '').replace('[', '').replace(']', '')[:100] or "Лист"
 
-# ---------- Создание ГВГ опроса ----------
 async def start_gvg_poll(update, context):
     context.user_data['gvg'] = {'step': 'datetime'}
     await update.message.reply_text("Введите дату и время ГВГ (ДД.ММ.ГГГГ ЧЧ:ММ):",
@@ -81,7 +80,6 @@ async def gvg_callback(update, context):
         del context.user_data['gvg']
         await q.message.reply_text("Админ-панель:", reply_markup=get_admin_keyboard())
 
-# ---------- Пройти за другого ----------
 async def admin_poll_for_other(update, context):
     poll = get_active_poll()
     if not poll:
@@ -115,7 +113,6 @@ async def handle_external_answer(update, context):
     await update.message.reply_text(f"✅ Ответы для {nick} сохранены. Введите следующего или «❌ Отмена».")
     return True
 
-# ---------- Рассылка ----------
 async def send_poll_to_all(update, context):
     poll = get_active_poll()
     if not poll:
@@ -140,7 +137,6 @@ async def send_first_question(chat_id, poll, context):
     kb = get_poll_question_inline(poll['id'], m, 1)
     await context.bot.send_message(chat_id, f"📢 Опрос\n\n{poll['text']}\n\nВопрос 1/{len(poll['meetings'])}:\n{m}", parse_mode="Markdown", reply_markup=kb)
 
-# ---------- Обработка inline-ответов ----------
 async def poll_callback(update, context):
     q = update.callback_query
     await q.answer()
@@ -198,7 +194,6 @@ async def restart_callback(update, context):
     await q.edit_message_text("Начинаем заново...")
     await send_first_question(user_id, poll, context)
 
-# ---------- Экспорт ----------
 async def export_command(update, context):
     sh = get_google_spreadsheet()
     if not sh:
