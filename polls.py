@@ -15,7 +15,9 @@ def get_google_spreadsheet():
         return None
     info = json.loads(creds)
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    return gspread.authorize(Credentials.from_service_account_info(info, scopes)).open_by_key(sid)
+    # Исправленный способ авторизации
+    creds_obj = Credentials.from_service_account_info(info, scopes=scopes)
+    return gspread.authorize(creds_obj).open_by_key(sid)
 
 def sanitize_sheet_name(name):
     return name.replace('/', '').replace('\\', '').replace('?', '').replace('*', '').replace('[', '').replace(']', '')[:100] or "Лист"
