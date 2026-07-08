@@ -1,6 +1,6 @@
 import os
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
-from database import init_db, is_registered, is_pending, get_user_nick, get_user_class
+from database import init_db, is_registered, is_pending, get_all_users, get_user_nick, get_user_class
 from keyboards import (
     get_main_keyboard, get_admin_keyboard, get_polls_management_keyboard,
     get_registration_management_keyboard, get_clan_management_keyboard
@@ -28,6 +28,37 @@ async def main_menu(update, context):
         await update.message.reply_text("Сначала /start")
         return
     await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid, is_admin(uid)))
+
+from database import get_all_users
+
+async def show_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    users = get_all_users()
+    if not users:
+        await update.message.reply_text("Нет зарегистрированных пользователей.")
+        return
+    text = "📋 *Список пользователей:*\n\n"
+    for user_id, nick, user_class in users:
+        safe_nick = nick.replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+        safe_class = (user_class or "Не указан").replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+        text += f"• {safe_nick} — {safe_class}\n"
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🆘 Показать ID всех пользователей", callback_data="show_all_ids")]
+    ])
+    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    
+async def show_all_ids_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    users = get_all_users()
+    if not users:
+        await query.edit_message_text("Нет зарегистрированных пользователей.")
+        return
+    text = "🆔 *Список пользователей с ID:*\n\n"
+    for user_id, nick, user_class in users:
+        safe_nick = nick.replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+        safe_class = (user_class or "Не указан").replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+        text += f"• {safe_nick} — {safe_class} — `{user_id}`\n"
+    await query.edit_message_text(text, parse_mode="Markdown")
 
 async def handle_text(update, context):
     uid = update.effective_user.id
@@ -75,6 +106,10 @@ async def handle_text(update, context):
         await non_responders_cmd(update, context)
     elif text == "📝 Регистрация" and is_admin(uid):
         await registration_menu(update, context)
+    elif text == "🏰 Управление кланом" and is_admin(uid):
+        await update.message.reply_text("Управление кланом:", reply_markup=get_clan_management_keyboard())
+    elif text == "👥 Список пользователей" and is_admin(uid):
+        await show_users_list(update, context)
     elif text == "📋 Список ожидания" and is_admin(uid):
         await list_pending(update, context)
     elif text == "✅ Подтвердить всех" and is_admin(uid):
