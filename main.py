@@ -133,6 +133,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", main_menu))
+    app.add_handler(CallbackQueryHandler(show_all_ids_callback, pattern="^show_all_ids$"))
     app.add_handler(CommandHandler("myanswers", my_answers))
     app.add_handler(CommandHandler("export", export_command))
     app.add_handler(CommandHandler("send_poll", send_poll_to_all))
