@@ -1,6 +1,6 @@
 import os
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from database import init_db, is_registered, is_pending, get_all_users, get_user_nick, get_user_class
 from keyboards import (
     get_main_keyboard, get_admin_keyboard, get_polls_management_keyboard,
