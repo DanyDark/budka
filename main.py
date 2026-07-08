@@ -1,7 +1,10 @@
 import os
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 from database import init_db, is_registered, is_pending, get_user_nick, get_user_class
-from keyboards import get_main_keyboard, get_admin_keyboard, get_polls_management_keyboard
+from keyboards import (
+    get_main_keyboard, get_admin_keyboard, get_polls_management_keyboard,
+    get_registration_management_keyboard, get_clan_management_keyboard
+)
 from registration import (
     start, handle_registration_text, registration_menu, list_pending,
     confirm_all_pending_cmd, reject_pending_menu, handle_reject_pending
