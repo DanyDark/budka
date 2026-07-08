@@ -6,9 +6,17 @@ def get_main_keyboard(user_id, is_admin):
     if is_admin:
         kb.append([KeyboardButton("📊 Админ-панель")])
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
+    
+def get_clan_management_keyboard():
+    kb = [
+        [KeyboardButton("👥 Список пользователей")],
+        [KeyboardButton("🔙 Назад")]
+    ]
+    return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
 def get_admin_keyboard():
     kb = [[KeyboardButton("📊 Управление опросами")],
+          [KeyboardButton("🏰 Управление кланом")],
           [KeyboardButton("📝 Регистрация"), KeyboardButton("🔙 Назад")]]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
