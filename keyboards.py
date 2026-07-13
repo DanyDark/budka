@@ -30,6 +30,7 @@ def get_party_leader_keyboard():
 def get_clan_management_keyboard():
     kb = [
         [KeyboardButton("👥 Список пользователей")],
+        [KeyboardButton("🔹 Добавить в подсады"), KeyboardButton("🔸 Убрать из подсадов")],
         [KeyboardButton("👑 Назначить лидера пати"), KeyboardButton("❌ Снять лидера пати")],
         [KeyboardButton("🔙 Назад")]
     ]
