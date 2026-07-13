@@ -185,8 +185,6 @@ async def handle_text(update, context):
             context.user_data.pop('in_clan_menu', None)
             await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
             return
-        else:
-            return
 
     # Ввод ника для добавления/удаления подсада
     if context.user_data.get('awaiting_sub_nick'):
