@@ -149,6 +149,40 @@ def get_all_users():
     rows = cur.fetchall()
     conn.close()
     return rows
+# ---------- ЛИДЕР ПАТИ ----------
+def init_party_leader_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS party_leader (
+        user_id INTEGER PRIMARY KEY
+    )''')
+    conn.commit()
+    conn.close()
+
+def set_party_leader(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("INSERT OR REPLACE INTO party_leader (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    conn.close()
+
+def remove_party_leader():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM party_leader")
+    conn.commit()
+    conn.close()
+
+def get_party_leader():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT user_id FROM party_leader LIMIT 1")
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+def is_party_leader(user_id):
+    return get_party_leader() == user_id
 
 # ---------- ОПРОСЫ ----------
 def create_poll(text, meetings):
