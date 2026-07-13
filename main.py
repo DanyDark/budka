@@ -72,6 +72,7 @@ async def show_all_ids_callback(update: Update, context: ContextTypes.DEFAULT_TY
         safe_class = (user_class or "Не указан").replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
         text += f"• {safe_nick} — {safe_class} — `{user_id}`\n"
     await query.edit_message_text(text, parse_mode="Markdown")
+    
 async def handle_text(update, context):
     uid = update.effective_user.id
     text = update.message.text.strip()
@@ -79,7 +80,8 @@ async def handle_text(update, context):
     # Отмена
     if text == "❌ Отмена":
         for k in ['awaiting_nick', 'awaiting_class', 'reject_mode', 'gvg', 'ext_step',
-                  'party_add_mode', 'in_party_menu', 'in_clan_menu', 'awaiting_leader_id']:
+                  'party_add_mode', 'in_party_menu', 'in_clan_menu', 'awaiting_leader_id',
+                  'awaiting_sub_nick']:
             context.user_data.pop(k, None)
         await update.message.reply_text("Отменено.", reply_markup=get_main_keyboard(uid))
         return
@@ -96,7 +98,7 @@ async def handle_text(update, context):
         await update.message.reply_text("Заявка ожидает подтверждения.")
         return
 
-    # Ввод ID для назначения лидера пати (вызывается из меню управления кланом)
+    # Ввод ID для назначения лидера пати
     if context.user_data.get('awaiting_leader_id'):
         try:
             new_id = int(text)
@@ -108,7 +110,7 @@ async def handle_text(update, context):
         await update.message.reply_text(f"Лидер пати назначен: {new_id}")
         return
 
-    # Меню лидера пати (для назначенного лидера)
+    # Меню лидера пати
     if text == "👑 Лидер пати" and is_party_leader(uid):
         context.user_data['in_party_menu'] = True
         await update.message.reply_text("Лидер пати:", reply_markup=get_party_leader_keyboard())
@@ -152,13 +154,13 @@ async def handle_text(update, context):
         await update.message.reply_text(f"✅ {nick} ({cls.upper()}) добавлен.")
         return
 
-    # ---------- Меню управления кланом (для админов) ----------
+    # ---------- Меню управления кланом ----------
     if text == "🏰 Управление кланом" and is_admin(uid):
         context.user_data['in_clan_menu'] = True
         await update.message.reply_text("Управление кланом:", reply_markup=get_clan_management_keyboard())
         return
 
-       if context.user_data.get('in_clan_menu'):
+    if context.user_data.get('in_clan_menu'):
         if text == "👥 Список пользователей":
             await show_users_list(update, context)
             return
@@ -183,8 +185,9 @@ async def handle_text(update, context):
             await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
             return
         else:
-            return  # игнорируем другие команды внутри меню
-            
+            return
+
+    # Ввод ника для добавления/удаления подсада
     if context.user_data.get('awaiting_sub_nick'):
         nick = text.strip()
         mode = context.user_data.pop('awaiting_sub_nick')
@@ -200,7 +203,7 @@ async def handle_text(update, context):
             await update.message.reply_text(f"🔸 {nick} убран из подсадов.")
         return
 
-    # ---------- Основное меню (общие команды) ----------
+    # ---------- Основное меню ----------
     if text == "👤 Мой профиль":
         await update.message.reply_text(f"Ник: {get_user_nick(uid)}\nКласс: {get_user_class(uid)}")
         return
