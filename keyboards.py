@@ -1,10 +1,30 @@
+import os
 from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from database import is_party_leader
 
-def get_main_keyboard(user_id, is_admin):
-    kb = [[KeyboardButton("👤 Мой профиль")],
-          [KeyboardButton("📝 Мои ответы"), KeyboardButton("❓ Помощь")]]
-    if is_admin:
+ADMIN_IDS = [int(x) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip()]
+
+def is_admin(user_id):
+    return user_id in ADMIN_IDS
+
+def get_main_keyboard(user_id):
+    kb = [
+        [KeyboardButton("👤 Мой профиль")],
+        [KeyboardButton("📝 Мои ответы"), KeyboardButton("❓ Помощь")]
+    ]
+    if is_admin(user_id):
         kb.append([KeyboardButton("📊 Админ-панель")])
+    if is_party_leader(user_id):
+        kb.append([KeyboardButton("👑 Лидер пати")])
+    return ReplyKeyboardMarkup(kb, resize_keyboard=True)
+    
+def get_party_leader_keyboard():
+    kb = [
+        [KeyboardButton("➕ Добавить в состав")],
+        [KeyboardButton("➖ Удалить из состава")],
+        [KeyboardButton("🗳 Проголосовать за пати")],
+        [KeyboardButton("🔙 Назад")]
+    ]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
     
 def get_clan_management_keyboard():
