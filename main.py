@@ -70,7 +70,6 @@ async def show_all_ids_callback(update: Update, context: ContextTypes.DEFAULT_TY
         safe_class = (user_class or "Не указан").replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
         text += f"• {safe_nick} — {safe_class} — `{user_id}`\n"
     await query.edit_message_text(text, parse_mode="Markdown")
-
 async def handle_text(update, context):
     uid = update.effective_user.id
     text = update.message.text.strip()
@@ -78,7 +77,7 @@ async def handle_text(update, context):
     # Отмена
     if text == "❌ Отмена":
         for k in ['awaiting_nick', 'awaiting_class', 'reject_mode', 'gvg', 'ext_step',
-                  'party_add_mode', 'in_party_menu', 'awaiting_leader_id']:
+                  'party_add_mode', 'in_party_menu', 'in_clan_menu', 'awaiting_leader_id']:
             context.user_data.pop(k, None)
         await update.message.reply_text("Отменено.", reply_markup=get_main_keyboard(uid))
         return
@@ -95,7 +94,7 @@ async def handle_text(update, context):
         await update.message.reply_text("Заявка ожидает подтверждения.")
         return
 
-    # Назначение лидера пати (админ вводит ID)
+    # Ввод ID для назначения лидера пати (вызывается из меню управления кланом)
     if context.user_data.get('awaiting_leader_id'):
         try:
             new_id = int(text)
@@ -107,7 +106,7 @@ async def handle_text(update, context):
         await update.message.reply_text(f"Лидер пати назначен: {new_id}")
         return
 
-    # Меню лидера пати (только для назначенного лидера)
+    # Меню лидера пати (для назначенного лидера)
     if text == "👑 Лидер пати" and is_party_leader(uid):
         context.user_data['in_party_menu'] = True
         await update.message.reply_text("Лидер пати:", reply_markup=get_party_leader_keyboard())
@@ -140,7 +139,7 @@ async def handle_text(update, context):
             await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
             return
 
-    # Добавление участника в режиме party_add_mode
+    # Добавление участника (режим party_add_mode)
     if context.user_data.get('party_add_mode') and text != "Завершить":
         parts = text.split()
         if len(parts) != 2:
@@ -151,7 +150,42 @@ async def handle_text(update, context):
         await update.message.reply_text(f"✅ {nick} ({cls.upper()}) добавлен.")
         return
 
-    # Основное меню
+    # ---------- Меню управления кланом (для админов) ----------
+    if text == "🏰 Управление кланом" and is_admin(uid):
+        context.user_data['in_clan_menu'] = True
+        await update.message.reply_text("Управление кланом:", reply_markup=get_clan_management_keyboard())
+        return
+
+    if context.user_data.get('in_clan_menu'):
+        if text == "👥 Список пользователей":
+            await show_users_list(update, context)
+            return
+        elif text == "📋 Список ожидания":
+            await list_pending(update, context)
+            return
+        elif text == "✅ Подтвердить всех":
+            await confirm_all_pending_cmd(update, context)
+            return
+        elif text == "❌ Отказать":
+            await reject_pending_menu(update, context)
+            return
+        elif text == "👑 Назначить лидера пати":
+            context.user_data['awaiting_leader_id'] = True
+            await update.message.reply_text("Введите Telegram ID нового лидера пати:")
+            return
+        elif text == "❌ Снять лидера пати":
+            remove_party_leader()
+            await update.message.reply_text("Лидер пати снят.")
+            return
+        elif text == "🔙 Назад":
+            context.user_data.pop('in_clan_menu', None)
+            await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
+            return
+        else:
+            # Внутри меню клана игнорируем неизвестные команды
+            return
+
+    # ---------- Основное меню (общие команды) ----------
     if text == "👤 Мой профиль":
         await update.message.reply_text(f"Ник: {get_user_nick(uid)}\nКласс: {get_user_class(uid)}")
         return
@@ -185,29 +219,6 @@ async def handle_text(update, context):
     elif text == "📝 Регистрация" and is_admin(uid):
         await registration_menu(update, context)
         return
-    elif text == "🏰 Управление кланом" and is_admin(uid):
-        await update.message.reply_text("Управление кланом:", reply_markup=get_clan_management_keyboard())
-        return
-    elif text == "👥 Список пользователей" and is_admin(uid):
-        await show_users_list(update, context)
-        return
-    elif text == "📋 Список ожидания" and is_admin(uid):
-        await list_pending(update, context)
-        return
-    elif text == "✅ Подтвердить всех" and is_admin(uid):
-        await confirm_all_pending_cmd(update, context)
-        return
-    elif text == "❌ Отказать" and is_admin(uid):
-        await reject_pending_menu(update, context)
-        return
-    elif text == "👑 Назначить лидера пати" and is_admin(uid):
-        context.user_data['awaiting_leader_id'] = True
-        await update.message.reply_text("Введите Telegram ID нового лидера пати:")
-        return
-    elif text == "❌ Снять лидера пати" and is_admin(uid):
-        remove_party_leader()
-        await update.message.reply_text("Лидер пати снят.")
-        return
     elif text == "🔙 Назад" and is_admin(uid):
         await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
         return
@@ -221,7 +232,8 @@ async def handle_text(update, context):
     else:
         await update.message.reply_text("Неизвестная команда.")
         return
-    async def show_party_delete_menu(leader_id, update: Update):
+
+async def show_party_delete_menu(leader_id, update: Update):
     members = get_party_members(leader_id)
     if not members:
         await update.message.reply_text("Состав пати пуст.", reply_markup=get_party_leader_keyboard())
