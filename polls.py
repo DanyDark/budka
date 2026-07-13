@@ -5,7 +5,7 @@ from google.oauth2.service_account import Credentials
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
 from database import *
-from keyboards import get_poll_question_inline, get_confirm_restart_inline, get_admin_keyboard
+from keyboards import get_poll_question_inline, get_confirm_restart_inline, get_admin_keyboard, get_party_leader_keyboard
 
 def get_google_spreadsheet():
     creds = os.environ.get("GOOGLE_CREDS")
@@ -237,3 +237,131 @@ async def my_answers(update, context):
         return
     msg = "📝 Ваши ответы:\n" + "\n".join(f"• {m}: {a}" for m, a in answers.items())
     await update.message.reply_text(msg)
+    
+# ---------- ГОЛОСОВАНИЕ ЗА ПАТИ ----------
+async def vote_for_party(leader_id, update, context):
+    from database import get_active_poll, get_party_members
+    poll = get_active_poll()
+    if not poll:
+        await update.message.reply_text("Нет активного опроса.")
+        return
+    members = get_party_members(leader_id)  # список (nick, class)
+    if not members:
+        await update.message.reply_text("Состав пати пуст. Добавьте участников.")
+        return
+    context.user_data['party_vote'] = {
+        'members': members,
+        'poll': poll,
+        'current_member_idx': 0,
+        'current_meeting_idx': 0,
+        'answers': {}
+    }
+    await ask_party_vote_question(leader_id, update, context)
+
+async def ask_party_vote_question(chat_id, update_or_query, context):
+    data = context.user_data['party_vote']
+    members = data['members']
+    poll = data['poll']
+    member_idx = data['current_member_idx']
+    meeting_idx = data['current_meeting_idx']
+
+    if member_idx >= len(members):
+        await save_all_party_votes(chat_id, update_or_query, context)
+        return
+
+    nick, cls = members[member_idx]
+    meetings = poll['meetings']
+    if meeting_idx >= len(meetings):
+        data['current_member_idx'] += 1
+        data['current_meeting_idx'] = 0
+        await ask_party_vote_question(chat_id, update_or_query, context)
+        return
+
+    meeting = meetings[meeting_idx]
+    keyboard = get_poll_question_inline(poll['id'], meeting, meeting_idx+1)
+    text = f"🗳 Голосование за **{nick}** ({cls})\n\nВстреча: {meeting}"
+    if isinstance(update_or_query, Update):
+        await update_or_query.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    else:
+        await update_or_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+
+async def save_all_party_votes(chat_id, update_or_query, context):
+    data = context.user_data.pop('party_vote', None)
+    if not data:
+        return
+    poll = data['poll']
+    answers = data['answers']
+    for nick, meeting_answers in answers.items():
+        member = next((m for m in data['members'] if m[0] == nick), None)
+        cls = member[1] if member else "Не указан"
+        for meeting, answer in meeting_answers.items():
+            save_external_response(poll['id'], nick, cls, meeting, answer, chat_id)
+    text = "✅ Голоса за пати сохранены!"
+    if isinstance(update_or_query, Update):
+        await update_or_query.message.reply_text(text, reply_markup=get_party_leader_keyboard())
+    else:
+        await update_or_query.edit_message_text(text)
+        await update_or_query.message.reply_text("Лидер пати:", reply_markup=get_party_leader_keyboard())
+
+# Обновляем poll_callback, чтобы он обрабатывал голосование за пати
+async def poll_callback(update, context):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+
+    # Если идёт голосование за пати – обрабатываем внутри него
+    if 'party_vote' in context.user_data:
+        return await party_poll_callback_logic(update, context)
+
+    # Обычная обработка
+    if not is_registered(user_id):
+        await query.edit_message_text("❌ Вы не зарегистрированы.")
+        return
+    parts = query.data.split('_')
+    poll_id = int(parts[1])
+    answer = next(p for p in parts if p in ('да', 'нет', 'не знаю'))
+    meeting = '_'.join(parts[2:parts.index(answer)])
+    next_idx = int(parts[-1])
+    poll = get_active_poll()
+    if not poll or poll['id'] != poll_id:
+        await query.edit_message_text("Опрос неактивен.")
+        return
+    if 'answers' not in context.user_data:
+        context.user_data['answers'] = {}
+    context.user_data['answers'][meeting] = answer
+    if next_idx >= len(poll['meetings']):
+        summary = "✅ Ответы:\n\n" + "\n".join(f"• {m}: {context.user_data['answers'].get(m, '—')}" for m in poll['meetings'])
+        await query.edit_message_text(summary + "\n\nВсё верно?", reply_markup=get_confirm_restart_inline(poll_id))
+    else:
+        next_m = poll['meetings'][next_idx]
+        await query.edit_message_text(
+            f"📢 Опрос\n\n{poll['text']}\n\nВопрос {next_idx+1}/{len(poll['meetings'])}:\n{next_m}",
+            reply_markup=get_poll_question_inline(poll_id, next_m, next_idx+1))
+
+async def party_poll_callback_logic(update, context):
+    query = update.callback_query
+    await query.answer()
+    data = context.user_data['party_vote']
+    parts = query.data.split('_')
+    poll_id = int(parts[1])
+    answer = next(p for p in parts if p in ('да', 'нет', 'не знаю'))
+    meeting = '_'.join(parts[2:parts.index(answer)])
+    next_idx = int(parts[-1])
+    poll = get_active_poll()
+    if not poll or poll['id'] != poll_id:
+        await query.edit_message_text("Опрос неактивен.")
+        return
+    member_idx = data['current_member_idx']
+    members = data['members']
+    if member_idx >= len(members):
+        return
+    nick, cls = members[member_idx]
+    if nick not in data['answers']:
+        data['answers'][nick] = {}
+    data['answers'][nick][meeting] = answer
+    if next_idx >= len(poll['meetings']):
+        data['current_member_idx'] += 1
+        data['current_meeting_idx'] = 0
+    else:
+        data['current_meeting_idx'] = next_idx
+    await ask_party_vote_question(query.from_user.id, query, context)
