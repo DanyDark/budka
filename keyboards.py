@@ -30,6 +30,7 @@ def get_party_leader_keyboard():
 def get_clan_management_keyboard():
     kb = [
         [KeyboardButton("👥 Список пользователей")],
+        [KeyboardButton("👑 Назначить лидера пати"), KeyboardButton("❌ Снять лидера пати")],
         [KeyboardButton("🔙 Назад")]
     ]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
@@ -39,7 +40,6 @@ def get_admin_keyboard():
         [KeyboardButton("📊 Управление опросами")],
         [KeyboardButton("📝 Регистрация")],
         [KeyboardButton("🏰 Управление кланом")],
-        [KeyboardButton("👑 Назначить лидера пати"), KeyboardButton("❌ Снять лидера пати")],
         [KeyboardButton("🔙 Назад")]
     ]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
