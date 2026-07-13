@@ -163,6 +163,21 @@ def get_all_users():
     rows = cur.fetchall()
     conn.close()
     return rows
+    
+def set_substitute(user_id, status=True):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET is_substitute=? WHERE user_id=?", (1 if status else 0, user_id))
+    conn.commit()
+    conn.close()
+
+def is_substitute(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT is_substitute FROM users WHERE user_id=?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row and row[0] == 1
 
 # ---------- ЛИДЕР ПАТИ ----------
 def set_party_leader(user_id):
@@ -270,6 +285,14 @@ def get_user_current_poll_answers(user_id):
     rows = cur.fetchall()
     conn.close()
     return {m: a for m, a in rows}
+    
+def get_user_id_by_nick(nick):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT user_id FROM users WHERE nick=?", (nick,))
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
 
 def get_non_responders(poll_id):
     conn = sqlite3.connect(DB_FILE)
