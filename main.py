@@ -52,6 +52,7 @@ async def show_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for user_id, nick, user_class in users:
         safe_nick = nick.replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
         safe_class = (user_class or "Не указан").replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+        # Добавляем значок подсада
         mark = "🔹 " if is_substitute(user_id) else ""
         text += f"• {mark}{safe_nick} — {safe_class}\n"
     keyboard = InlineKeyboardMarkup([
