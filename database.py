@@ -52,6 +52,18 @@ def init_db():
         admin_id INTEGER,
         responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
 
+    # Лидер пати (один на весь бот)
+    c.execute('''CREATE TABLE IF NOT EXISTS party_leader (
+        user_id INTEGER PRIMARY KEY)''')
+
+    # Состав пати
+    c.execute('''CREATE TABLE IF NOT EXISTS party_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        leader_id INTEGER NOT NULL,
+        nick TEXT NOT NULL,
+        class TEXT NOT NULL,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+
     conn.commit()
     conn.close()
 
@@ -79,7 +91,7 @@ def get_user_class(user_id):
     row = cur.fetchone()
     conn.close()
     return row[0] if row else None
-    
+
 def register_user(user_id, nick, user_class):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
@@ -103,7 +115,8 @@ def is_nick_taken(nick):
 def add_pending_user(user_id, nick, user_class):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    cur.execute("INSERT OR REPLACE INTO pending_users VALUES (?,?,?,CURRENT_TIMESTAMP)", (user_id, nick, user_class))
+    cur.execute("INSERT OR REPLACE INTO pending_users VALUES (?,?,?,CURRENT_TIMESTAMP)",
+                (user_id, nick, user_class))
     conn.commit()
     conn.close()
 
@@ -129,7 +142,8 @@ def confirm_all_pending():
     cur.execute("SELECT user_id, nick, class FROM pending_users")
     pending = cur.fetchall()
     for uid, nick, cls in pending:
-        cur.execute("INSERT OR REPLACE INTO users (user_id, nick, class) VALUES (?,?,?)", (uid, nick, cls))
+        cur.execute("INSERT OR REPLACE INTO users (user_id, nick, class) VALUES (?,?,?)",
+                    (uid, nick, cls))
     cur.execute("DELETE FROM pending_users")
     conn.commit()
     conn.close()
@@ -149,16 +163,8 @@ def get_all_users():
     rows = cur.fetchall()
     conn.close()
     return rows
-# ---------- ЛИДЕР ПАТИ ----------
-def init_party_leader_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS party_leader (
-        user_id INTEGER PRIMARY KEY
-    )''')
-    conn.commit()
-    conn.close()
 
+# ---------- ЛИДЕР ПАТИ ----------
 def set_party_leader(user_id):
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
@@ -183,6 +189,30 @@ def get_party_leader():
 
 def is_party_leader(user_id):
     return get_party_leader() == user_id
+
+# ---------- СОСТАВ ПАТИ ----------
+def add_party_member(leader_id, nick, cls):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("INSERT INTO party_members (leader_id, nick, class) VALUES (?, ?, ?)",
+                (leader_id, nick, cls))
+    conn.commit()
+    conn.close()
+
+def remove_party_member(leader_id, nick):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM party_members WHERE leader_id=? AND nick=?", (leader_id, nick))
+    conn.commit()
+    conn.close()
+
+def get_party_members(leader_id):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT nick, class FROM party_members WHERE leader_id=? ORDER BY added_at", (leader_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows  # список кортежей (nick, class)
 
 # ---------- ОПРОСЫ ----------
 def create_poll(text, meetings):
@@ -255,13 +285,11 @@ def get_responses_grouped_by_meeting(poll_id):
     grouped = {}
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
-    # Свои ответы
     cur.execute("""SELECT u.nick, u.class, pr.meeting, pr.answer
                    FROM poll_responses pr JOIN users u ON pr.user_id=u.user_id
                    WHERE pr.poll_id=?""", (poll_id,))
     for nick, cls, meeting, answer in cur.fetchall():
         grouped.setdefault(meeting, []).append((nick, cls or "Не указан", answer))
-    # Внешние ответы
     cur.execute("SELECT external_nick, external_class, meeting, answer FROM external_responses WHERE poll_id=?", (poll_id,))
     for nick, cls, meeting, answer in cur.fetchall():
         grouped.setdefault(meeting, []).append((nick, cls or "Внешний", answer))
