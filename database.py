@@ -16,6 +16,10 @@ def init_db():
         nick TEXT NOT NULL,
         class TEXT,
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    try:
+    c.execute("ALTER TABLE users ADD COLUMN is_substitute INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
 
     # Заявки
     c.execute('''CREATE TABLE IF NOT EXISTS pending_users (
