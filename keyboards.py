@@ -35,9 +35,13 @@ def get_clan_management_keyboard():
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
 def get_admin_keyboard():
-    kb = [[KeyboardButton("📊 Управление опросами")],
-          [KeyboardButton("🏰 Управление кланом")],
-          [KeyboardButton("📝 Регистрация"), KeyboardButton("🔙 Назад")]]
+    kb = [
+        [KeyboardButton("📊 Управление опросами")],
+        [KeyboardButton("📝 Регистрация")],
+        [KeyboardButton("🏰 Управление кланом")],
+        [KeyboardButton("👑 Назначить лидера пати"), KeyboardButton("❌ Снять лидера пати")],
+        [KeyboardButton("🔙 Назад")]
+    ]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
 def get_polls_management_keyboard():
