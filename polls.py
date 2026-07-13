@@ -179,6 +179,22 @@ async def confirm_callback(update, context):
     if answers:
         save_responses_batch(user_id, poll_id, answers)
     await q.edit_message_text("✅ Ответы сохранены.")
+    
+def get_responses_grouped_by_meeting(poll_id):
+    grouped = {}
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("""SELECT u.user_id, u.nick, u.class, pr.meeting, pr.answer
+                   FROM poll_responses pr JOIN users u ON pr.user_id=u.user_id
+                   WHERE pr.poll_id=?""", (poll_id,))
+    for uid, nick, cls, meeting, answer in cur.fetchall():
+        prefix = "🔹 " if is_substitute(uid) else ""
+        grouped.setdefault(meeting, []).append((f"{prefix}{nick}", cls or "Не указан", answer))
+    cur.execute("SELECT external_nick, external_class, meeting, answer FROM external_responses WHERE poll_id=?", (poll_id,))
+    for nick, cls, meeting, answer in cur.fetchall():
+        grouped.setdefault(meeting, []).append((nick, cls or "Внешний", answer))
+    conn.close()
+    return grouped
 
 async def restart_callback(update, context):
     q = update.callback_query
