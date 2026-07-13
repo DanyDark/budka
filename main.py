@@ -19,7 +19,8 @@ from polls import (
 from database import (
     init_db, is_registered, is_pending, get_user_nick, get_user_class,
     get_all_users, is_party_leader, set_party_leader, remove_party_leader,
-    get_party_members, add_party_member, remove_party_member
+    get_party_members, add_party_member, remove_party_member,
+    get_user_id_by_nick, set_substitute, is_substitute
 )
 from keyboards import (
     get_main_keyboard, get_admin_keyboard, get_polls_management_keyboard,
