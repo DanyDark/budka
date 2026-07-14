@@ -39,7 +39,7 @@ async def main_menu(update, context):
     if not is_registered(uid):
         await update.message.reply_text("Сначала /start")
         return
-    await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid, is_admin(uid)))
+    await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
 
 from database import get_all_users
 
