@@ -17,7 +17,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_registered(user_id):
         await update.message.reply_text(
             f"С возвращением, {get_user_nick(user_id)} (класс: {get_user_class(user_id)})!",
-            reply_markup=get_main_keyboard(user_id, is_adm))
+            reply_markup=get_main_keyboard(user_id))
     elif is_pending(user_id):
         await update.message.reply_text("Ваша заявка уже отправлена администратору. Ожидайте.")
     else:
@@ -54,14 +54,14 @@ async def handle_registration_text(update: Update, context: ContextTypes.DEFAULT
             register_user(user_id, nick, user_class)
             await update.message.reply_text(
                 f"✅ Регистрация завершена!\nНик: {nick}\nКласс: {user_class}",
-                reply_markup=get_main_keyboard(user_id, is_admin=True))
+                reply_markup=get_main_keyboard(user_id))
             return
 
         # Обычный пользователь — заявка
         add_pending_user(user_id, nick, user_class)
         await update.message.reply_text(
             f"✅ Заявка отправлена!\nНик: {nick}\nКласс: {user_class}\nОжидайте подтверждения.",
-            reply_markup=get_main_keyboard(user_id, is_admin=False))
+            reply_markup=get_main_keyboard(user_id))
         for aid in ADMIN_IDS:
             try:
                 await context.bot.send_message(aid, f"📝 Заявка: {nick} ({user_class}) ID:{user_id}")
