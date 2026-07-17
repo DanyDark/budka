@@ -236,6 +236,15 @@ async def handle_text(update, context):
     elif text == "📝 Регистрация" and is_admin(uid):
         await registration_menu(update, context)
         return
+    if text == "📋 Список ожидания" and is_admin(uid):
+        await list_pending(update, context)
+        return
+    elif text == "✅ Подтвердить всех" and is_admin(uid):
+        await confirm_all_pending_cmd(update, context)
+        return
+    elif text == "❌ Отказать" and is_admin(uid):
+        await reject_pending_menu(update, context)
+        return
     elif text == "🔙 Назад" and is_admin(uid):
         await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
         return
