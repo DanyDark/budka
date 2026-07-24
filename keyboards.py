@@ -31,11 +31,12 @@ def get_clan_management_keyboard():
     kb = [
         [KeyboardButton("👥 Список пользователей")],
         [KeyboardButton("🔹 Добавить в подсады"), KeyboardButton("🔸 Убрать из подсадов")],
+        [KeyboardButton("🗑 Удалить пользователя")],
         [KeyboardButton("👑 Назначить лидера пати"), KeyboardButton("❌ Снять лидера пати")],
         [KeyboardButton("🔙 Назад")]
     ]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
-
+    
 def get_admin_keyboard():
     kb = [
         [KeyboardButton("📊 Управление опросами")],
