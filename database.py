@@ -79,6 +79,17 @@ def is_registered(user_id):
     res = cur.fetchone()
     conn.close()
     return res is not None
+    
+def delete_user_by_id(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM users WHERE user_id=?", (user_id,))
+    cur.execute("DELETE FROM pending_users WHERE user_id=?", (user_id,))
+    cur.execute("DELETE FROM poll_responses WHERE user_id=?", (user_id,))
+    cur.execute("DELETE FROM party_members WHERE leader_id=?", (user_id,))
+    cur.execute("DELETE FROM party_leader WHERE user_id=?", (user_id,))
+    conn.commit()
+    conn.close()
 
 def get_user_nick(user_id):
     conn = sqlite3.connect(DB_FILE)
