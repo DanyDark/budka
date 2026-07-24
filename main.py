@@ -20,7 +20,7 @@ from database import (
     init_db, is_registered, is_pending, get_user_nick, get_user_class,
     get_all_users, is_party_leader, set_party_leader, remove_party_leader,
     get_party_members, add_party_member, remove_party_member,
-    get_user_id_by_nick, set_substitute, is_substitute
+    get_user_id_by_nick, set_substitute, is_substitute, delete_user_by_id
 )
 from keyboards import (
     get_main_keyboard, get_admin_keyboard, get_polls_management_keyboard,
@@ -181,10 +181,36 @@ async def handle_text(update, context):
             remove_party_leader()
             await update.message.reply_text("Лидер пати снят.")
             return
+        elif text == "🗑 Удалить пользователя":
+            context.user_data['delete_user_mode'] = True
+            await update.message.reply_text(
+                "Введите ник или ID пользователя для удаления.\n"
+                "Для завершения нажмите «Завершить».",
+                reply_markup=ReplyKeyboardMarkup([[KeyboardButton("Завершить")]], resize_keyboard=True))
+            return
         elif text == "🔙 Назад":
             context.user_data.pop('in_clan_menu', None)
             await update.message.reply_text("Главное меню:", reply_markup=get_main_keyboard(uid))
             return
+            
+    if context.user_data.get('delete_user_mode'):
+        if text == "Завершить":
+            context.user_data.pop('delete_user_mode', None)
+            await update.message.reply_text("Удаление завершено.", reply_markup=get_main_keyboard(uid))
+            return
+        # Определяем, ник это или ID
+        target_id = None
+        if text.isdigit():
+            target_id = int(text)
+        else:
+            target_id = get_user_id_by_nick(text)
+        if target_id:
+            delete_user_by_id(target_id)
+            await update.message.reply_text(
+                f"✅ Пользователь {text} удалён. Введите следующий ник/ID или нажмите «Завершить».")
+        else:
+            await update.message.reply_text("❌ Пользователь не найден. Попробуйте ещё раз или нажмите «Завершить».")
+        return
 
     # Ввод ника для добавления/удаления подсада
     if context.user_data.get('awaiting_sub_nick'):
